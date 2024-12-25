@@ -1,101 +1,198 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState } from "react";
+import { Button } from "@app/components/ui/button";
+import { Input } from "@app/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@app/components/ui/table";
+import { Checkbox } from "@app/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@app/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@app/components/ui/card";
+import { Download } from "lucide-react";
+import * as XLSX from "xlsx";
+
+interface Product {
+  code: string;
+  origin: string;
+}
+
+interface Customer {
+  id: string;
+  companyName: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newProduct, setNewProduct] = useState<Product>({
+    code: "",
+    origin: "",
+  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  const [products, setProducts] = useState<Product[]>([]);
+
+  const filteredProducts = products.filter((product) =>
+    product.code.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const handleProductSelect = (code: string) => {
+    setSelectedProducts((current) =>
+      current.includes(code)
+        ? current.filter((c) => c !== code)
+        : [...current, code]
+    );
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProducts([...products, newProduct]);
+    setNewProduct({ code: "", origin: "" });
+    setIsModalOpen(false);
+  };
+
+  const exportToExcel = () => {
+    const selectedData = products.filter((product) =>
+      selectedProducts.includes(product.code)
+    );
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(selectedData);
+
+    XLSX.utils.book_append_sheet(wb, ws, "Seçili Ürünler");
+
+    XLSX.writeFile(wb, "secili-urunler.xlsx");
+  };
+
+  return (
+    <div className="container mx-auto py-10 space-y-8">
+      <div className="flex justify-between items-center">
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button>Yeni Ürün Ekle</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Yeni Ürün Ekle</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                placeholder="Ürün Kodu"
+                value={newProduct.code}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, code: e.target.value })
+                }
+              />
+              <Input
+                placeholder="Menşei"
+                value={newProduct.origin}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, origin: e.target.value })
+                }
+              />
+              <Button type="submit">Kaydet</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* All Products Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Tüm Ürünler</CardTitle>
+            <div className="mt-4">
+              <Input
+                placeholder="Ürün kodu ile ara..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Seç</TableHead>
+                  <TableHead>Ürün Kodu</TableHead>
+                  <TableHead>Menşei</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.code}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedProducts.includes(product.code)}
+                        onCheckedChange={() =>
+                          handleProductSelect(product.code)
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>{product.code}</TableCell>
+                    <TableCell>{product.origin}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Selected Products Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>Seçili Ürünler</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={selectedProducts.length === 0}
+                onClick={exportToExcel}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Excel&apos;e Aktar
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ürün Kodu</TableHead>
+                  <TableHead>Menşei</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products
+                  .filter((product) => selectedProducts.includes(product.code))
+                  .map((product) => (
+                    <TableRow key={product.code}>
+                      <TableCell>{product.code}</TableCell>
+                      <TableCell>{product.origin}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
