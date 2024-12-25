@@ -33,11 +33,6 @@ interface Product {
   origin: string;
 }
 
-interface Customer {
-  id: string;
-  companyName: string;
-}
-
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [newProduct, setNewProduct] = useState<Product>({
